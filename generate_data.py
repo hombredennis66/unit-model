@@ -51,9 +51,13 @@ spending += df['Relationship_Status'] * 2000
 noise = np.random.normal(0, 3000, n_rows)
 df['Semester_Spending_KES'] = (spending + noise).astype(int)
 
-# Categorical mapping for Spending_Category (more balanced but still skewed)
-mean_spend = df['Semester_Spending_KES'].mean()
-df['Spending_Category'] = df['Semester_Spending_KES'].apply(lambda x: 'High' if x > mean_spend else 'Medium')
+# Categorical mapping for Spending_Category using quantiles for better balance
+# Low (bottom 33%), Medium (33-66%), High (top 33%)
+df['Spending_Category'] = pd.qcut(
+    df['Semester_Spending_KES'],
+    q=3,
+    labels=['Low', 'Medium', 'High']
+)
 
 df.to_csv('student_spending_dataset_extended.csv', index=False)
 print(f"Dataset created with {n_rows} records.")

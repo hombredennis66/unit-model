@@ -28,7 +28,7 @@ This project provides a complete walkthrough of building a machine learning syst
 ### Setup and Usage
 0. **Clone the Repository:**
    ```bash
-   git clone <repository url>
+   git clone <repository-url>
    cd student-spending-prediction
    ```
 1. **Install Dependencies:**
@@ -45,7 +45,11 @@ This project provides a complete walkthrough of building a machine learning syst
    ```
    This generates `results.json` which contains performance metrics and chart data.
 4. **View Dashboard:**
-   Open `index.html` in any modern web browser.
+   To avoid CORS issues when fetching `results.json`, serve the project using a local server:
+   ```bash
+   python3 -m http.server 8000
+   ```
+   Then open `http://localhost:8000` in your browser.
 
 ---
 
@@ -90,4 +94,8 @@ This project provides a complete walkthrough of building a machine learning syst
    ```
    该脚本会生成包含模型指标和图表数据的 `results.json`。
 4. **查看仪表板:**
-   在浏览器中打开 `index.html`。
+   为避免加载 `results.json` 时的跨域 (CORS) 问题，请使用本地服务器运行项目：
+   ```bash
+   python3 -m http.server 8000
+   ```
+   然后在浏览器中访问 `http://localhost:8000`。
