@@ -28,7 +28,7 @@ This project provides a complete walkthrough of building a machine learning syst
 ### Setup and Usage
 0. **Clone the Repository:**
    ```bash
-   git clone <https://github.com/hombredennis66/unit-model>
+   git clone <repository-url>
    cd student-spending-prediction
    ```
 1. **Install Dependencies:**
