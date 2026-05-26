@@ -1,11 +1,10 @@
 import pandas as pd
 import numpy as np
-from sklearn.model_selection import train_test_split
 
 # Set seed for reproducibility
 np.random.seed(42)
 
-n_rows = 30
+n_rows = 250
 
 # Define columns
 data = {
@@ -14,46 +13,47 @@ data = {
     'Year_of_Study': np.random.randint(1, 5, n_rows),
     'Course': np.random.choice(['Engineering', 'Business', 'Medicine', 'Arts', 'Science'], n_rows),
     'Student_Background': np.random.choice(['Urban', 'Rural'], n_rows),
-    'Monthly_Allowance_KES': np.random.randint(5000, 20000, n_rows),
+    'Monthly_Allowance_KES': np.random.randint(5000, 25000, n_rows),
     'Accommodation': np.random.choice(['On-campus', 'Off-campus'], n_rows),
     'Distance_From_Campus_KM': np.random.uniform(0, 15, n_rows).round(1),
     'Transport_Type': np.random.choice(['Walk', 'Bike', 'Bus', 'Car'], n_rows),
-    'Outings_Per_Month': np.random.randint(0, 10, n_rows),
+    'Outings_Per_Month': np.random.randint(0, 12, n_rows),
     'Gym_Membership': np.random.choice([0, 1], n_rows),
     'Relationship_Status': np.random.choice([0, 1], n_rows),
-    'Gaming_Hours_Per_Week': np.random.randint(0, 20, n_rows),
+    'Gaming_Hours_Per_Week': np.random.randint(0, 25, n_rows),
     'Cafeteria_Visits_Per_Month': np.random.randint(0, 30, n_rows),
     'Ride_Hailing_Trips_Per_Month': np.random.randint(0, 15, n_rows),
     'Online_Shopping_Orders_Per_Month': np.random.randint(0, 10, n_rows),
-    'Club_Events_Attended': np.random.randint(0, 8, n_rows),
-    'Printing_Frequency': np.random.randint(1, 10, n_rows),
-    'Mobile_Data_Usage_GB': np.random.randint(1, 50, n_rows),
+    'Club_Events_Attended': np.random.randint(0, 10, n_rows),
+    'Printing_Frequency': np.random.randint(1, 15, n_rows),
+    'Mobile_Data_Usage_GB': np.random.randint(1, 60, n_rows),
     'Meal_Habit': np.random.choice(['Canteen', 'Cooking', 'Takeout'], n_rows),
 }
 
 df = pd.DataFrame(data)
 
-# Test indices from train_test_split(random_state=42, test_size=0.2)
-test_indices = [27, 15, 23, 17, 8, 9]
-test_values = [35457, 35801, 56775, 27187, 71255, 43517]
+# Logic to generate Semester_Spending_KES with specific importance weights
+# Base spending
+spending = 20000
 
-df['Semester_Spending_KES'] = 44496 # mean
+# Positive correlations
+spending += df['Distance_From_Campus_KM'] * 1500
+spending += df['Monthly_Allowance_KES'] * 0.8
+spending += df['Cafeteria_Visits_Per_Month'] * 300
+spending += df['Gaming_Hours_Per_Week'] * 200
+spending += df['Club_Events_Attended'] * 500
+spending += df['Mobile_Data_Usage_GB'] * 100
+spending += df['Outings_Per_Month'] * 800
+spending += df['Ride_Hailing_Trips_Per_Month'] * 400
+spending += df['Relationship_Status'] * 2000
 
-for idx, val in zip(test_indices, test_values):
-    df.loc[idx, 'Semester_Spending_KES'] = val
+# Add noise
+noise = np.random.normal(0, 3000, n_rows)
+df['Semester_Spending_KES'] = (spending + noise).astype(int)
 
-remaining_indices = [i for i in range(n_rows) if i not in test_indices]
-# Generate values that would make the mean 44496
-current_sum = sum(test_values)
-target_total = 44496 * 30
-needed_sum = target_total - current_sum
-other_values = np.random.normal(needed_sum / len(remaining_indices), 5000, len(remaining_indices)).astype(int)
-df.loc[remaining_indices, 'Semester_Spending_KES'] = other_values
-
-# Sort for spending category
-df = df.sort_values('Semester_Spending_KES', ascending=False)
-df['Spending_Category'] = ['High'] * 26 + ['Medium'] * 4
-df = df.sort_index()
+# Categorical mapping for Spending_Category (more balanced but still skewed)
+mean_spend = df['Semester_Spending_KES'].mean()
+df['Spending_Category'] = df['Semester_Spending_KES'].apply(lambda x: 'High' if x > mean_spend else 'Medium')
 
 df.to_csv('student_spending_dataset_extended.csv', index=False)
-print("Dataset created.")
+print(f"Dataset created with {n_rows} records.")
