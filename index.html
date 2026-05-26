@@ -10,7 +10,7 @@
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
       line-height: 1.6;
       color: #333;
-      max-width: 1000px;
+      max-width: 1100px;
       margin: 0 auto;
       padding: 20px;
       background-color: #f4f7f6;
@@ -67,11 +67,40 @@
     }
     .badge-regression { background: #d1e3f8; color: #3266ad; }
     .badge-class { background: #f8d7da; color: #a94442; }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 30px;
+    }
+    @media (max-width: 800px) {
+      .grid-2 { grid-template-columns: 1fr; }
+    }
+
+    table.confusion-matrix {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: center;
+      margin-top: 20px;
+    }
+    table.confusion-matrix td, table.confusion-matrix th {
+      border: 1px solid #ddd;
+      padding: 12px;
+    }
+    .cm-cell {
+      background-color: rgba(50, 102, 173, 0.1);
+      font-weight: bold;
+    }
+    .cm-header {
+      background-color: #f8f9fa;
+      font-size: 0.8rem;
+      color: #666;
+    }
   </style>
 </head>
 <body>
   <h1>Student Spending ML Dashboard</h1>
-  <p>Enhanced visualization including Feature Selection and Classification performance.</p>
+  <p>Production-ready visualization including Confidence Intervals, Learning Curves, and Confusion Matrix.</p>
 
   <h3>Regression Performance (CV R²)</h3>
   <div id="regression-metrics" class="metrics-grid"></div>
@@ -80,23 +109,37 @@
   <div id="classification-metrics" class="metrics-grid"></div>
 
   <div class="card">
-    <h2>Actual vs Predicted Semester Spend (KES)</h2>
+    <h2>Actual vs Predicted Spend with Confidence Intervals (±RMSE)</h2>
     <div class="chart-container">
       <canvas id="predChart"></canvas>
     </div>
   </div>
 
-  <div class="card">
-    <h2>Top Feature Importances (Random Forest)</h2>
-    <div class="chart-container">
-      <canvas id="featChart"></canvas>
+  <div class="grid-2">
+    <div class="card">
+      <h2>Learning Curves (Ridge CV)</h2>
+      <div class="chart-container">
+        <canvas id="learningChart"></canvas>
+      </div>
+    </div>
+    <div class="card">
+      <h2>Confusion Matrix (Logistic Reg)</h2>
+      <div id="cm-container"></div>
     </div>
   </div>
 
-  <div class="card">
-    <h2>Ridge Alpha Search (Regularization Tuning)</h2>
-    <div class="chart-container">
-      <canvas id="alphaChart"></canvas>
+  <div class="grid-2">
+    <div class="card">
+      <h2>Top Feature Importances (Random Forest)</h2>
+      <div class="chart-container">
+        <canvas id="featChart"></canvas>
+      </div>
+    </div>
+    <div class="card">
+      <h2>Ridge Alpha Search (Regularization Tuning)</h2>
+      <div class="chart-container">
+        <canvas id="alphaChart"></canvas>
+      </div>
     </div>
   </div>
 
@@ -107,7 +150,7 @@
         if (!response.ok) throw new Error("Failed to load results.json");
         const data = await response.json();
 
-        // Render Regression Metrics
+        // 1. Regression Metrics
         const regMetricsDiv = document.getElementById('regression-metrics');
         const modelsToShow = ['Linear Regression', 'Ridge', 'Lasso', 'Ridge (Top 10)'];
         modelsToShow.forEach(m => {
@@ -121,7 +164,7 @@
           regMetricsDiv.appendChild(div);
         });
 
-        // Render Classification Metrics
+        // 2. Classification Metrics
         const classMetricsDiv = document.getElementById('classification-metrics');
         const classMetrics = [
           { label: 'Macro F1 Score', key: 'CV F1 Macro' },
@@ -138,16 +181,27 @@
           classMetricsDiv.appendChild(div);
         });
 
-        // 1. Predictions Chart
+        // 3. Predictions Chart with Confidence Intervals
+        const rmse = data.predictions.rmse_margin;
         new Chart(document.getElementById('predChart'), {
           type: 'bar',
           data: {
             labels: data.predictions.labels,
             datasets: [
-              { label: 'Actual', data: data.predictions.actual, backgroundColor: '#3266ad' },
-              { label: 'Linear', data: data.predictions.linear, backgroundColor: '#73726c' },
-              { label: 'Ridge',  data: data.predictions.ridge,  backgroundColor: '#1d9e75' },
-              { label: 'Lasso',  data: data.predictions.lasso,  backgroundColor: '#e24b4a' }
+              { label: 'Actual', data: data.predictions.actual, backgroundColor: '#3266ad', order: 2 },
+              { label: 'Ridge Pred', data: data.predictions.ridge, backgroundColor: '#1d9e75', order: 3 },
+              {
+                label: 'Confidence Interval (±RMSE)',
+                data: data.predictions.ridge.map(v => ({ x: 0, y: [v - rmse, v + rmse] })),
+                type: 'bar',
+                backgroundColor: 'rgba(29, 158, 117, 0.2)',
+                borderColor: 'rgba(29, 158, 117, 0.5)',
+                borderWidth: 1,
+                grouped: false,
+                barPercentage: 1,
+                categoryPercentage: 0.8,
+                order: 1
+              }
             ]
           },
           options: {
@@ -155,15 +209,56 @@
             maintainAspectRatio: false,
             animation: false,
             scales: {
-              y: {
-                beginAtZero: false,
-                ticks: { callback: v => 'K' + Math.round(v / 1000) }
-              }
+              y: { beginAtZero: false, ticks: { callback: v => 'K' + Math.round(v / 1000) } }
             }
           }
         });
 
-        // 2. Feature Importance Chart
+        // 4. Learning Curves Chart
+        new Chart(document.getElementById('learningChart'), {
+          type: 'line',
+          data: {
+            labels: data.learning_curve.Sizes,
+            datasets: [
+              {
+                label: 'Training Score',
+                data: data.learning_curve['Train Scores'],
+                borderColor: '#73726c',
+                fill: false
+              },
+              {
+                label: 'Cross-Validation Score',
+                data: data.learning_curve['Test Scores'],
+                borderColor: '#3266ad',
+                fill: false
+              }
+            ]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            animation: false,
+            scales: {
+              x: { title: { display: true, text: 'Training Examples' } },
+              y: { title: { display: true, text: 'R² Score' }, min: 0, max: 1 }
+            }
+          }
+        });
+
+        // 5. Confusion Matrix Table
+        const cmContainer = document.getElementById('cm-container');
+        let cmHtml = '<table class="confusion-matrix"><tr><th class="cm-header">Actual \\ Pred</th>';
+        data.classification.Labels.forEach(l => cmHtml += `<th class="cm-header">${l}</th>`);
+        cmHtml += '</tr>';
+        data.classification['Confusion Matrix'].forEach((row, i) => {
+          cmHtml += `<tr><td class="cm-header">${data.classification.Labels[i]}</td>`;
+          row.forEach(val => cmHtml += `<td class="cm-cell">${val}</td>`);
+          cmHtml += '</tr>';
+        });
+        cmHtml += '</table>';
+        cmContainer.innerHTML = cmHtml;
+
+        // 6. Feature Importance Chart
         new Chart(document.getElementById('featChart'), {
           type: 'bar',
           data: {
@@ -185,7 +280,7 @@
           }
         });
 
-        // 3. Alpha Search Chart
+        // 7. Alpha Search Chart
         new Chart(document.getElementById('alphaChart'), {
           type: 'line',
           data: {

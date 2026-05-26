@@ -3,9 +3,9 @@ import numpy as np
 import json
 from sklearn.linear_model import LinearRegression, Ridge, RidgeCV, LassoCV, LogisticRegression
 from sklearn.ensemble import RandomForestRegressor
-from sklearn.model_selection import train_test_split, cross_val_score, KFold, StratifiedKFold
+from sklearn.model_selection import train_test_split, cross_val_score, KFold, StratifiedKFold, learning_curve
 from sklearn.preprocessing import OneHotEncoder, StandardScaler, LabelEncoder
-from sklearn.metrics import mean_squared_error, r2_score, mean_absolute_error, f1_score
+from sklearn.metrics import mean_squared_error, r2_score, mean_absolute_error, f1_score, confusion_matrix
 import warnings
 warnings.filterwarnings('ignore')
 
@@ -103,6 +103,7 @@ results['Ridge (Top 10)'] = {
 # Step 9 — Classification Pipeline
 le = LabelEncoder()
 y_class_enc = le.fit_transform(y_class)
+class_labels = le.classes_.tolist()
 
 skf = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
 clf = LogisticRegression(class_weight='balanced', max_iter=1000)
@@ -110,9 +111,29 @@ clf = LogisticRegression(class_weight='balanced', max_iter=1000)
 cv_f1_macro = cross_val_score(clf, X_scaled, y_class_enc, cv=skf, scoring='f1_macro').mean()
 cv_acc = cross_val_score(clf, X_scaled, y_class_enc, cv=skf, scoring='accuracy').mean()
 
+# Confusion Matrix for Dashboard
+X_train_c, X_test_c, y_train_c, y_test_c = train_test_split(X_scaled, y_class_enc, test_size=0.2, random_state=42, stratify=y_class_enc)
+clf.fit(X_train_c, y_train_c)
+y_pred_c = clf.predict(X_test_c)
+cm = confusion_matrix(y_test_c, y_pred_c)
+
 classification_results = {
     'CV F1 Macro': float(cv_f1_macro),
-    'CV Accuracy': float(cv_acc)
+    'CV Accuracy': float(cv_acc),
+    'Labels': class_labels,
+    'Confusion Matrix': cm.tolist()
+}
+
+# Step 10 — Learning Curves
+train_sizes, train_scores, test_scores = learning_curve(
+    RidgeCV(alphas=alphas_fine, cv=kf), X_scaled, y, cv=kf,
+    train_sizes=np.linspace(0.2, 1.0, 10), scoring='r2'
+)
+
+learning_curve_data = {
+    'Sizes': train_sizes.tolist(),
+    'Train Scores': train_scores.mean(axis=1).tolist(),
+    'Test Scores': test_scores.mean(axis=1).tolist()
 }
 
 # Alpha sensitivity for Ridge (Dashboard visualization)
@@ -132,7 +153,8 @@ output_data = {
         'actual': [float(x) for x in y_test[:10]],
         'linear': [float(x) for x in predictions['Linear Regression'][:10]],
         'ridge': [float(x) for x in predictions['Ridge'][:10]],
-        'lasso': [float(x) for x in predictions['Lasso'][:10]]
+        'lasso': [float(x) for x in predictions['Lasso'][:10]],
+        'rmse_margin': float(results['Ridge']['Test RMSE'])
     },
     'importances': {
         'labels': top_features,
@@ -142,7 +164,8 @@ output_data = {
         'labels': [f'{a:.3f}' for a in alpha_range],
         'values': alpha_scores,
         'baseline': float(results['Linear Regression']['CV R2'])
-    }
+    },
+    'learning_curve': learning_curve_data
 }
 
 with open('results.json', 'w') as f:
