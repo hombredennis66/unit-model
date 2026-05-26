@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Student Spending Prediction Dashboard</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      line-height: 1.6;
+      color: #333;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+      background-color: #f4f7f6;
+    }
+    .card {
+      background: #fff;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      padding: 20px;
+      margin-bottom: 30px;
+    }
+    h1, h2 {
+      color: #2c3e50;
+    }
+    .chart-container {
+      position: relative;
+      height: 300px;
+      width: 100%;
+    }
+  </style>
+</head>
+<body>
+  <h1>Student Spending ML Dashboard</h1>
+  <p>This dashboard presents the results of the student spending prediction models as described in the ML Project Guide.</p>
+
+  <div class="card">
+    <h2>Actual vs Predicted Semester Spend (KES)</h2>
+    <div class="chart-container">
+      <canvas id="predChart" role="img" aria-label="Bar chart comparing actual and predicted student spending for 6 test students"></canvas>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Top Feature Importances</h2>
+    <div class="chart-container" style="height: 320px;">
+      <canvas id="featChart" role="img" aria-label="Horizontal bar chart of the top 8 feature importances"></canvas>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Ridge Alpha Search (Regularization Tuning)</h2>
+    <div class="chart-container" style="height: 260px;">
+      <canvas id="alphaChart" role="img" aria-label="Line chart showing CV R-squared for different Ridge alpha values"></canvas>
+    </div>
+  </div>
+
+  <script>
+    // 1. Predictions Chart
+    const students  = ['S1','S2','S3','S4','S5','S6'];
+    const actual    = [35457, 35801, 56775, 27187, 71255, 43517];
+    const predLR    = [35296, 38111, 52764, 29031, 72359, 42583];
+    const predRidge = [36809, 39856, 54548, 27772, 69455, 43142];
+
+    new Chart(document.getElementById('predChart'), {
+      type: 'bar',
+      data: {
+        labels: students,
+        datasets: [
+          { label: 'Actual',  data: actual,    backgroundColor: '#3266ad' },
+          { label: 'Linear',  data: predLR,    backgroundColor: '#73726c' },
+          { label: 'Ridge',   data: predRidge, backgroundColor: '#1d9e75' }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          y: {
+            beginAtZero: true,
+            ticks: { callback: v => 'K' + Math.round(v / 1000) }
+          }
+        }
+      }
+    });
+
+    // 2. Feature Importance Chart
+    new Chart(document.getElementById('featChart'), {
+      type: 'bar',
+      data: {
+        labels: [
+          'Distance from campus', 'Monthly allowance', 'Cafeteria visits',
+          'Gaming hours', 'Club events', 'Relationship status', 'Age', 'Mobile data'
+        ],
+        datasets: [{
+          label: 'Importance (%)',
+          data: [34.82, 14.28, 8.79, 7.57, 6.09, 4.35, 3.77, 3.66],
+          backgroundColor: [
+            '#3266ad','#3266ad','#3266ad',
+            '#73726c','#73726c','#73726c','#73726c','#73726c'
+          ]
+        }]
+      },
+      options: {
+        indexAxis: 'y',
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          x: {
+            beginAtZero: true,
+            ticks: { callback: v => v + '%' }
+          }
+        }
+      }
+    });
+
+    // 3. Alpha Search Chart
+    const alphaLabels = ['0.001','0.01','0.1','0.5','0.715','1','5','10','50','100','500','1000'];
+    const cvR2Values  = [-0.14, 0.209, 0.586, 0.55, 0.500, 0.507, 0.527, 0.527, 0.40, 0.233, 0.00, -0.155];
+    const lrBaseline  = new Array(alphaLabels.length).fill(-0.195);
+
+    new Chart(document.getElementById('alphaChart'), {
+      type: 'line',
+      data: {
+        labels: alphaLabels,
+        datasets: [
+          {
+            label: 'Ridge CV R²',
+            data: cvR2Values,
+            borderColor: '#1d9e75',
+            backgroundColor: 'rgba(29,158,117,0.1)',
+            fill: true,
+            tension: 0.3
+          },
+          {
+            label: 'Linear baseline',
+            data: lrBaseline,
+            borderColor: '#e24b4a',
+            borderDash: [5, 4],
+            pointRadius: 0
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          x: { title: { display: true, text: 'Alpha (log scale)' } },
+          y: { title: { display: true, text: 'CV R²' } }
+        }
+      }
+    });
+  </script>
+</body>
+</html>
