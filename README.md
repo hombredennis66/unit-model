@@ -26,6 +26,11 @@ This project provides a complete walkthrough of building a machine learning syst
 - **Academic:** Year of study, Printing frequency.
 
 ### Setup and Usage
+0. **Clone the Repository:**
+   ```bash
+   git clone <repository-url>
+   cd student-spending-prediction
+   ```
 1. **Install Dependencies:**
    ```bash
    pip install pandas numpy scikit-learn
@@ -66,6 +71,11 @@ This project provides a complete walkthrough of building a machine learning syst
 - **学术:** 就读年级、打印频率。
 
 ### 安装与运行
+0. **克隆仓库:**
+   ```bash
+   git clone <repository-url>
+   cd student-spending-prediction
+   ```
 1. **安装依赖:**
    ```bash
    pip install pandas numpy scikit-learn
